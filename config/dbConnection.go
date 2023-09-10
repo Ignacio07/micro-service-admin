@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Ignacio07/micro-service-admin/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -31,5 +32,5 @@ func Connect() {
 
 func autoMigrate(connection *gorm.DB) {
 	//connection.Debug().AutoMigrate(&models.User{}, &models.Task{}) //Informacion por consola
-	connection.AutoMigrate(&models.User{}, &models.Task{})
+	connection.AutoMigrate(&models.User{})
 }
