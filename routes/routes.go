@@ -26,4 +26,7 @@ func Setup(app *fiber.App) {
 	app.Put("/users/:userId", controllers.UpdateUser)
 	app.Delete("/users/:userId", controllers.DeleteUser)
 
+	//test
+	//app.Test("/testing",tests.TestCreateUser)
+
 }

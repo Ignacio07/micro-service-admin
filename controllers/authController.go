@@ -13,7 +13,7 @@ import (
 )
 
 func Login(c *fiber.Ctx) error {
-	//Obtener el correo y contraseña desde el body del request
+	//Obtener el id y contraseña desde el body del request
 
 	var body struct {
 		Store    string `json:"store"`
