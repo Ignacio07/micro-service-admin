@@ -18,9 +18,9 @@ func GetUsers(c *fiber.Ctx) error {
 }
 
 func GetUser(c *fiber.Ctx) error {
-	userId := c.Params("userId")
+	userStore := c.Params("store")
 	var user models.User
-	db.DB.Select("id, first_name, last_name, email").Where("id = ?", userId).First(&user)
+	db.DB.Select("store").Where("store = ?", userStore).First(&user)
 
 	if user.ID == 0 {
 		return c.Status(404).JSON(fiber.Map{"message": "User not found"})

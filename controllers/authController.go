@@ -1,41 +1,37 @@
 package controllers
 
 import (
-	"net/http"
+	"encoding/json"
+	"errors"
 	"os"
 	"time"
 
 	db "github.com/Ignacio07/micro-service-admin/config"
 	"github.com/Ignacio07/micro-service-admin/models"
-	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Login(c *fiber.Ctx) error {
-	//Obtener el id y contraseña desde el body del request
+func Login(body []byte) (string, error) {
+	//Obtener el correo y contraseña desde el body del request
+	var loginData models.LoginData
 
-	var body struct {
-		Store    string `json:"store"`
-		Password string `json:"password"`
+	err := json.Unmarshal(body, &loginData)
+	if err != nil {
+		return "", err
 	}
-
-	if c.BodyParser(&body) != nil {
-		return c.Status(400).JSON(fiber.Map{"message": "Bad request"})
-	}
-
 	//Buscar al usuario en la DB
 	var user models.User
-	db.DB.Where("store = ?", body.Store).First(&user)
+	db.DB.Where("store = ?", loginData.Store).First(&user)
 
 	if user.ID == 0 {
-		return c.Status(404).JSON(fiber.Map{"message": "User not found"})
+		return "", errors.New("User not found")
 	}
 
 	//Verificar la contraseña
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Incorrect password"})
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
+		return "", errors.New("Incorrect password")
 
 	}
 
@@ -48,59 +44,42 @@ func Login(c *fiber.Ctx) error {
 
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
-		return c.Status(401).JSON(fiber.Map{
-			"success": false,
-			"message": "Token Expired or invalid",
-		})
+		return "", errors.New("Token Expired or invalid")
 	}
 
-	//Configurar y setear la cookie
-	c.Cookie(&fiber.Cookie{
-		Name:    "Authorization",
-		Value:   tokenString,
-		Expires: time.Now().Add(time.Hour * 24 * 30),
-	})
-
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": "Logged in",
-		"data":    user,
-	})
+	return tokenString, nil
 
 }
 
-func SingUp(c *fiber.Ctx) error {
+func SingUp(body []byte) error {
 	//Obtener los campos desde el body del request
 
-	var body struct {
-		Id       string `json:"id"`
-		Store    string `json:"store"`
-		Password string `json:"password"`
-	}
+	var singUpData models.SingUpData
 
-	if c.BodyParser(&body) != nil {
-		return c.Status(400).JSON(fiber.Map{"message": "Bad request"})
+	err := json.Unmarshal(body, &singUpData)
+	if err != nil {
+		return err
 	}
 
 	// Generar un hash de la contraseña para almacenarla de manera segura
-	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(singUpData.Password), bcrypt.DefaultCost)
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Internal server error"})
+		return errors.New("Failed to hash password")
 	}
 
 	// Crear el usuario en la DB
 	user := models.User{
-		Store:    body.Store,
+		Store:    singUpData.Store,
 		Password: string(hash),
 	}
 	result := db.DB.Create(&user)
 
 	if result.Error != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Internal server error"})
+		return errors.New("Failed to create user")
 	}
 
 	//Respuesta exitosa
-	return c.Status(http.StatusCreated).JSON(user)
+	return nil
 
 }
